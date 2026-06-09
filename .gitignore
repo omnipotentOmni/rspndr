@@ -1,0 +1,25 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Build outputs
+/dist/
+/out/
+/artifacts/
+/bundle/
+
+# Python cache
+__pycache__/
+
+# Playwright CLI artifacts
+.playwright-cli/

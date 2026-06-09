@@ -1,0 +1,14 @@
+{
+  "name": "Rspndr",
+  "id": "rspndr-local-prototype",
+  "api": "1.0.0",
+  "main": "plugin/code.js",
+  "ui": "ui/index.html",
+  "editorType": ["figma"],
+  "relaunchButtons": [
+    {
+      "command": "open",
+      "name": "Open Rspndr"
+    }
+  ]
+}
