@@ -15,6 +15,8 @@ Rspndr matches **only** these exact component names:
 
 It does **not** watch generic layers or anything else with `bar` in the name.
 
+Rspndr also includes a manual target/value control in the plugin UI, so you can pick a found progress component and push a value directly from the panel.
+
 ## Component contract
 
 ### Bar
@@ -76,16 +78,27 @@ For `Progress / Bar`, the plugin currently works without that property.
 
 ## Use
 
+### Automatic mode
 1. Put a supported `Progress / Bar` or `Progress / Radial` component on the current page.
 2. Keep the plugin open.
 3. Change the component's `value` property.
 4. Rspndr will rescan the current page and update the visual progress layer.
+
+### Manual mode
+1. Keep the plugin open.
+2. In **Target automation**, choose a found progress component.
+3. Enter a value such as `20` or `20%`.
+4. Click **Apply**.
+
+Rspndr will push that value to the selected target and update the progress display immediately.
 
 ## Plugin UI
 
 The plugin UI is intentionally minimal:
 
 - listen toggle
+- target automation picker
+- manual value input + apply action
 - tracked count
 - updated count
 - found charts list

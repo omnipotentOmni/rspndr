@@ -16,6 +16,7 @@
   --panel-border: rgba(255, 255, 255, 0.08);
   --surface: rgba(255, 255, 255, 0.04);
   --surface-strong: rgba(255, 255, 255, 0.07);
+  --surface-float: #151c29;
   --text: #f5f7fb;
   --muted: #93a0b4;
   --accent: #7c9cff;
@@ -36,7 +37,8 @@ body {
   color: var(--text);
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -164,15 +166,142 @@ body {
   transform: translateX(20px);
 }
 
-.metrics-card {
+.manual-card,
+.metrics-card,
+.charts-card {
   padding: 14px;
 }
 
-.metrics-head {
+.metrics-head,
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.manual-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.picker {
+  position: relative;
+}
+
+.picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.picker-trigger__label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picker-trigger__chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.7);
+  transform: rotate(45deg);
+  flex: 0 0 auto;
+  margin-top: -3px;
+}
+
+.picker-menu[hidden] {
+  display: none !important;
+}
+
+.picker-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  max-height: 188px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(22, 29, 42, 0.98), rgba(18, 23, 34, 0.98));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38);
+}
+
+.picker-option {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-option:hover,
+.picker-option.is-active {
+  background: rgba(124, 156, 255, 0.12);
+}
+
+.picker-option__name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.picker-option__meta,
+.picker-empty {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.picker-empty {
+  padding: 10px 11px;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
 }
 
 .status-pill {
@@ -233,17 +362,6 @@ body {
   font-size: 12px;
   line-height: 1.4;
   color: var(--text);
-}
-
-.charts-card {
-  padding: 14px;
-}
-
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .section-title {
@@ -312,7 +430,6 @@ body {
 }
 
 .action-button {
-  flex: 1 1 auto;
   padding: 12px 14px;
   border-radius: 14px;
   cursor: pointer;
@@ -328,10 +445,29 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
+  white-space: nowrap;
 }
 
-.action-button:hover {
+.action-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.action-button:hover:not(:disabled),
+.input:hover,
+.picker-trigger:hover {
   border-color: rgba(255, 255, 255, 0.18);
+}
+
+.input:focus,
+.picker-trigger:focus {
+  border-color: rgba(124, 156, 255, 0.38);
+  box-shadow: 0 0 0 3px rgba(124, 156, 255, 0.12);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
 }
 
     </style>
@@ -356,6 +492,31 @@ body {
         <button id="listen-toggle" class="toggle" type="button" aria-pressed="true">
           <span class="toggle__knob"></span>
         </button>
+      </section>
+
+      <section class="section card manual-card">
+        <div class="section-head">
+          <p class="section-title">Target automation</p>
+        </div>
+        <div class="manual-grid">
+          <div class="field-group">
+            <span class="field-label">Target</span>
+            <div class="picker">
+              <button id="manual-target-button" class="picker-trigger" type="button" aria-expanded="false">
+                <span id="manual-target-label" class="picker-trigger__label">No targets found</span>
+                <span class="picker-trigger__chevron"></span>
+              </button>
+              <div id="manual-target-menu" class="picker-menu" hidden></div>
+            </div>
+          </div>
+          <div class="field-group">
+            <span class="field-label">Value</span>
+            <div class="input-row">
+              <input id="manual-value" class="input" type="text" inputmode="numeric" placeholder="20%" />
+              <button id="manual-apply" class="action-button action-button--secondary" type="button">Apply</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="section card metrics-card">
@@ -405,16 +566,96 @@ const refs = {
   message: document.querySelector('#status-message'),
   scanNow: document.querySelector('#scan-now'),
   foundCount: document.querySelector('#status-found-count'),
-  foundLog: document.querySelector('#status-found-log')
+  foundLog: document.querySelector('#status-found-log'),
+  manualTargetButton: document.querySelector('#manual-target-button'),
+  manualTargetLabel: document.querySelector('#manual-target-label'),
+  manualTargetMenu: document.querySelector('#manual-target-menu'),
+  manualValue: document.querySelector('#manual-value'),
+  manualApply: document.querySelector('#manual-apply')
 };
 
 const state = {
-  listening: true
+  listening: true,
+  items: [],
+  selectedTargetId: '',
+  targetMenuOpen: false
 };
 
 function syncUI() {
   refs.listenToggle.setAttribute('aria-pressed', String(state.listening));
   refs.listening.textContent = state.listening ? 'Listening' : 'Paused';
+  refs.manualApply.disabled = !state.selectedTargetId;
+  refs.manualTargetButton.setAttribute('aria-expanded', String(state.targetMenuOpen));
+  refs.manualTargetMenu.hidden = !state.targetMenuOpen;
+}
+
+function getSelectedItem() {
+  for (let i = 0; i < state.items.length; i += 1) {
+    if (state.items[i].id === state.selectedTargetId) {
+      return state.items[i];
+    }
+  }
+  return null;
+}
+
+function syncTargetLabel() {
+  const selected = getSelectedItem();
+  refs.manualTargetLabel.textContent = selected
+    ? selected.name + ' · ' + selected.kind
+    : 'No targets found';
+}
+
+function closeTargetMenu() {
+  state.targetMenuOpen = false;
+  syncUI();
+}
+
+function openTargetMenu() {
+  if (!state.items.length) {
+    return;
+  }
+  state.targetMenuOpen = true;
+  syncUI();
+}
+
+function renderTargetMenu(items) {
+  refs.manualTargetMenu.innerHTML = '';
+
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'picker-empty';
+    empty.textContent = 'No targets found';
+    refs.manualTargetMenu.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'picker-option';
+    button.setAttribute('data-target-id', item.id);
+    button.innerHTML = [
+      '<span class="picker-option__name">' + item.name + '</span>',
+      '<span class="picker-option__meta">' + item.kind + ' · value ' + item.value + '</span>'
+    ].join('');
+
+    if (item.id === state.selectedTargetId) {
+      button.classList.add('is-active');
+    }
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.selectedTargetId = item.id;
+      syncTargetLabel();
+      renderTargetMenu(state.items);
+      closeTargetMenu();
+      syncUI();
+    });
+
+    refs.manualTargetMenu.appendChild(button);
+  }
 }
 
 function renderChartItem(item) {
@@ -429,8 +670,31 @@ function renderChartItem(item) {
   ].join('');
 }
 
+function updateTargets(items) {
+  const previous = state.selectedTargetId;
+  state.items = items.slice();
+
+  if (!items.length) {
+    state.selectedTargetId = '';
+    syncTargetLabel();
+    renderTargetMenu([]);
+    closeTargetMenu();
+    syncUI();
+    return;
+  }
+
+  state.selectedTargetId = items.some(function(item) { return item.id === previous; })
+    ? previous
+    : items[0].id;
+
+  syncTargetLabel();
+  renderTargetMenu(items);
+  syncUI();
+}
+
 function updateFoundLog(items) {
   refs.foundCount.textContent = String(items.length);
+  updateTargets(items);
 
   if (!items.length) {
     refs.foundLog.innerHTML = '<div class="chart-empty">No matching progress components on this page.</div>';
@@ -440,14 +704,61 @@ function updateFoundLog(items) {
   refs.foundLog.innerHTML = items.map(renderChartItem).join('');
 }
 
+function sendManualApply() {
+  const rawValue = String(refs.manualValue.value || '').trim();
+  if (!state.selectedTargetId || !rawValue) {
+    return;
+  }
+
+  parent.postMessage({
+    pluginMessage: {
+      type: 'manual-apply',
+      targetId: state.selectedTargetId,
+      value: rawValue
+    }
+  }, '*');
+}
+
 refs.listenToggle.addEventListener('click', () => {
   state.listening = !state.listening;
   syncUI();
   parent.postMessage({ pluginMessage: { type: 'set-listening', value: state.listening } }, '*');
 });
 
+refs.manualTargetButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (state.targetMenuOpen) {
+    closeTargetMenu();
+  } else {
+    openTargetMenu();
+  }
+});
+
+refs.manualApply.addEventListener('click', () => {
+  sendManualApply();
+});
+
+refs.manualValue.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    sendManualApply();
+  }
+});
+
 refs.scanNow.addEventListener('click', () => {
   parent.postMessage({ pluginMessage: { type: 'sync-now' } }, '*');
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (!state.targetMenuOpen) return;
+  const withinPicker = event.target.closest('.picker');
+  if (!withinPicker) {
+    closeTargetMenu();
+  }
+});
+
+refs.manualTargetMenu.addEventListener('click', (event) => {
+  event.stopPropagation();
 });
 
 window.addEventListener('message', (event) => {
@@ -470,6 +781,7 @@ window.addEventListener('message', (event) => {
   }
 });
 
+syncTargetLabel();
 syncUI();
 updateFoundLog([]);
 parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*');

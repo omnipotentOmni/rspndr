@@ -137,6 +137,48 @@ function readNumericValue(node) {
   return Math.max(0, Math.min(100, value));
 }
 
+function parseInputValue(raw) {
+  var normalized = String(raw || '').trim().replace(/%/g, '');
+  var value = Number(normalized);
+  if (Number.isNaN(value)) return null;
+  return Math.max(0, Math.min(100, value));
+}
+
+function getPropertyKey(node, key) {
+  var properties = getComponentProperties(node);
+  if (!properties) return null;
+  var target = normalizeName(key);
+
+  for (var name in properties) {
+    var cleanName = normalizeName(name.split('#')[0]);
+    if (cleanName === target) {
+      return name;
+    }
+  }
+
+  return null;
+}
+
+function setManualValueOnNode(node, value) {
+  if (!node || typeof node.setProperties !== 'function') {
+    return false;
+  }
+
+  var propertyKey = getPropertyKey(node, PROPERTY_KEYS.value);
+  if (!propertyKey) {
+    return false;
+  }
+
+  try {
+    var payload = {};
+    payload[propertyKey] = String(value) + '%';
+    node.setProperties(payload);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 async function describeTrackedInstances(instances) {
   var items = [];
   for (var i = 0; i < instances.length; i += 1) {
@@ -389,6 +431,44 @@ function scheduleSync() {
   }, 60);
 }
 
+
+async function handleManualApply(message) {
+  var targetId = message && message.targetId ? message.targetId : '';
+  var parsedValue = parseInputValue(message && message.value);
+
+  if (!targetId || parsedValue === null) {
+    postStatus(0, 0, 'Enter a valid manual value');
+    return;
+  }
+
+  var tracked = await getTrackedInstances();
+  var targetNode = null;
+  for (var i = 0; i < tracked.length; i += 1) {
+    if (tracked[i].id === targetId) {
+      targetNode = tracked[i];
+      break;
+    }
+  }
+
+  if (!targetNode) {
+    postStatus(0, 0, 'Selected target is no longer available');
+    return;
+  }
+
+  var kind = await getProgressKind(targetNode);
+  if (!kind) {
+    postStatus(0, 0, 'Target is no longer supported');
+    return;
+  }
+
+  setManualValueOnNode(targetNode, parsedValue);
+  applyValueToInstance(targetNode, kind, parsedValue);
+  trackedValues.set(targetNode.id, parsedValue);
+
+  postStatus(tracked.length, 1, 'Manual value applied');
+  postFoundCharts(await describeTrackedInstances(tracked));
+}
+
 function registerEventHandlers() {
   figma.on('currentpagechange', function() {
     trackedValues.clear();
@@ -428,6 +508,13 @@ figma.ui.onmessage = function(message) {
     trackedValues.clear();
     syncAllResponsiveSliders().catch(function() {
       postStatus(0, 0, 'Sync failed');
+    });
+    return;
+  }
+
+  if (message.type === 'manual-apply') {
+    handleManualApply(message).catch(function() {
+      postStatus(0, 0, 'Manual update failed');
     });
   }
 };

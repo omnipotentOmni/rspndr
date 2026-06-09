@@ -5,6 +5,7 @@
   --panel-border: rgba(255, 255, 255, 0.08);
   --surface: rgba(255, 255, 255, 0.04);
   --surface-strong: rgba(255, 255, 255, 0.07);
+  --surface-float: #151c29;
   --text: #f5f7fb;
   --muted: #93a0b4;
   --accent: #7c9cff;
@@ -25,7 +26,8 @@ body {
   color: var(--text);
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -153,15 +155,142 @@ body {
   transform: translateX(20px);
 }
 
-.metrics-card {
+.manual-card,
+.metrics-card,
+.charts-card {
   padding: 14px;
 }
 
-.metrics-head {
+.metrics-head,
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.manual-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.picker {
+  position: relative;
+}
+
+.picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.picker-trigger__label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picker-trigger__chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.7);
+  transform: rotate(45deg);
+  flex: 0 0 auto;
+  margin-top: -3px;
+}
+
+.picker-menu[hidden] {
+  display: none !important;
+}
+
+.picker-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  max-height: 188px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(22, 29, 42, 0.98), rgba(18, 23, 34, 0.98));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38);
+}
+
+.picker-option {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-option:hover,
+.picker-option.is-active {
+  background: rgba(124, 156, 255, 0.12);
+}
+
+.picker-option__name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.picker-option__meta,
+.picker-empty {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.picker-empty {
+  padding: 10px 11px;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
 }
 
 .status-pill {
@@ -222,17 +351,6 @@ body {
   font-size: 12px;
   line-height: 1.4;
   color: var(--text);
-}
-
-.charts-card {
-  padding: 14px;
-}
-
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .section-title {
@@ -301,7 +419,6 @@ body {
 }
 
 .action-button {
-  flex: 1 1 auto;
   padding: 12px 14px;
   border-radius: 14px;
   cursor: pointer;
@@ -317,8 +434,27 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
+  white-space: nowrap;
 }
 
-.action-button:hover {
+.action-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.action-button:hover:not(:disabled),
+.input:hover,
+.picker-trigger:hover {
   border-color: rgba(255, 255, 255, 0.18);
+}
+
+.input:focus,
+.picker-trigger:focus {
+  border-color: rgba(124, 156, 255, 0.38);
+  box-shadow: 0 0 0 3px rgba(124, 156, 255, 0.12);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
 }
