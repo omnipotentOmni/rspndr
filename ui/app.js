@@ -4,52 +4,41 @@ const refs = {
   synced: document.querySelector('#status-synced'),
   listening: document.querySelector('#status-listening'),
   message: document.querySelector('#status-message'),
-  scanNow: document.querySelector('#scan-now')
+  scanNow: document.querySelector('#scan-now'),
+  foundCount: document.querySelector('#status-found-count'),
+  foundLog: document.querySelector('#status-found-log')
 };
 
 const state = {
   listening: true
 };
 
-function ensureLogArea() {
-  let logCard = document.querySelector('#log-card');
-  if (logCard) return logCard;
-
-  const section = document.createElement('section');
-  section.className = 'section status-card';
-  section.id = 'log-card';
-  section.innerHTML = `
-    <div class="status-row">
-      <span>Found charts</span>
-      <strong id="status-found-count">0</strong>
-    </div>
-    <div id="status-found-log" class="log-list">Waiting for scan…</div>
-  `;
-  refs.scanNow.parentElement.insertAdjacentElement('beforebegin', section);
-  return section;
-}
-
 function syncUI() {
   refs.listenToggle.setAttribute('aria-pressed', String(state.listening));
-  refs.listening.textContent = state.listening ? 'On' : 'Off';
+  refs.listening.textContent = state.listening ? 'Listening' : 'Paused';
+}
+
+function renderChartItem(item) {
+  return [
+    '<div class="chart-item">',
+    '<div>',
+    '<div class="chart-item__name">' + item.name + '</div>',
+    '<div class="chart-item__meta">Value ' + item.value + '</div>',
+    '</div>',
+    '<span class="chart-kind">' + item.kind + '</span>',
+    '</div>'
+  ].join('');
 }
 
 function updateFoundLog(items) {
-  const section = ensureLogArea();
-  const count = section.querySelector('#status-found-count');
-  const log = section.querySelector('#status-found-log');
-  count.textContent = String(items.length);
+  refs.foundCount.textContent = String(items.length);
 
   if (!items.length) {
-    log.textContent = 'No matching charts found on current page.';
+    refs.foundLog.innerHTML = '<div class="chart-empty">No matching progress components on this page.</div>';
     return;
   }
 
-  log.innerHTML = items
-    .map(function(item) {
-      return '<div class="log-item"><strong>' + item.name + '</strong><span>' + item.kind + ' · value ' + item.value + '</span><span>' + item.mainName + ' / ' + item.parentName + '</span><span>' + item.id + '</span></div>';
-    })
-    .join('');
+  refs.foundLog.innerHTML = items.map(renderChartItem).join('');
 }
 
 refs.listenToggle.addEventListener('click', () => {
@@ -83,5 +72,5 @@ window.addEventListener('message', (event) => {
 });
 
 syncUI();
-ensureLogArea();
+updateFoundLog([]);
 parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*');

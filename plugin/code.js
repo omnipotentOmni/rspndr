@@ -25,6 +25,7 @@ const trackedValues = new Map();
 let listeningEnabled = true;
 let isApplyingUpdate = false;
 let scanScheduled = false;
+let allPagesLoaded = false;
 
 figma.showUI(__html__, {
   width: 360,
@@ -68,13 +69,26 @@ function getPropertyValue(node, key) {
   return null;
 }
 
-function getNodeNames(node) {
+async function getMainComponentSafe(node) {
+  if (!node) return null;
+  if (node.type === 'COMPONENT') return node;
+  if (node.type !== 'INSTANCE' || typeof node.getMainComponentAsync !== 'function') {
+    return null;
+  }
+
+  try {
+    return await node.getMainComponentAsync();
+  } catch (error) {
+    return null;
+  }
+}
+
+async function getNodeNames(node) {
   var instanceName = node && node.name ? node.name : '';
-  var mainName = node && node.mainComponent && node.mainComponent.name
-    ? node.mainComponent.name
-    : instanceName;
-  var parentName = node && node.mainComponent && node.mainComponent.parent && node.mainComponent.parent.name
-    ? node.mainComponent.parent.name
+  var mainComponent = await getMainComponentSafe(node);
+  var mainName = mainComponent && mainComponent.name ? mainComponent.name : instanceName;
+  var parentName = mainComponent && mainComponent.parent && mainComponent.parent.name
+    ? mainComponent.parent.name
     : (node && node.parent && node.parent.name ? node.parent.name : '');
 
   return {
@@ -84,27 +98,29 @@ function getNodeNames(node) {
   };
 }
 
-function getProgressKind(node) {
+async function getProgressKind(node) {
   if (!node || (node.type !== 'INSTANCE' && node.type !== 'COMPONENT')) {
     return null;
   }
 
-  var names = getNodeNames(node);
-  var haystack = [names.instanceName, names.mainName, names.parentName].join(' | ').toLowerCase();
+  var names = await getNodeNames(node);
+  var instanceName = normalizeName(names.instanceName);
+  var mainName = normalizeName(names.mainName);
 
-  if (haystack.indexOf('progress / radial') !== -1 || haystack.indexOf('radial') !== -1) {
+  if (mainName === normalizeName(COMPONENT_NAMES.radial) || instanceName === normalizeName(COMPONENT_NAMES.radial)) {
     return 'radial';
   }
 
-  if (haystack.indexOf('progress / bar') !== -1 || haystack.indexOf('bar') !== -1) {
+  if (mainName === normalizeName(COMPONENT_NAMES.bar) || instanceName === normalizeName(COMPONENT_NAMES.bar)) {
     return 'bar';
   }
 
   return null;
 }
 
-function isResponsiveSlider(node) {
-  if (getProgressKind(node) === 'bar') {
+async function isResponsiveSlider(node, kind) {
+  var resolvedKind = kind || await getProgressKind(node);
+  if (resolvedKind === 'bar') {
     return true;
   }
 
@@ -121,11 +137,11 @@ function readNumericValue(node) {
   return Math.max(0, Math.min(100, value));
 }
 
-function describeTrackedInstances(instances) {
+async function describeTrackedInstances(instances) {
   var items = [];
   for (var i = 0; i < instances.length; i += 1) {
     var instance = instances[i];
-    var kind = getProgressKind(instance);
+    var kind = await getProgressKind(instance);
     var value = readNumericValue(instance);
     items.push({
       id: instance.id,
@@ -137,12 +153,33 @@ function describeTrackedInstances(instances) {
   return items;
 }
 
-function getTrackedInstances() {
-  return figma.currentPage.findAll(function(node) {
-    if (node.type !== 'INSTANCE' && node.type !== 'COMPONENT') return false;
-    if (!getProgressKind(node)) return false;
-    return isResponsiveSlider(node);
+async function getTrackedInstances() {
+  var candidates = figma.currentPage.findAll(function(node) {
+    return node.type === 'INSTANCE' || node.type === 'COMPONENT';
   });
+
+  var tracked = [];
+  for (var i = 0; i < candidates.length; i += 1) {
+    var node = candidates[i];
+    var kind = await getProgressKind(node);
+    if (!kind) continue;
+    if (!await isResponsiveSlider(node, kind)) continue;
+    tracked.push(node);
+  }
+
+  return tracked;
+}
+
+function safeFindOne(node, predicate) {
+  if (!node || typeof node.findOne !== 'function') {
+    return null;
+  }
+
+  try {
+    return node.findOne(predicate);
+  } catch (error) {
+    return null;
+  }
 }
 
 function ensureStoredNumber(node, key, fallbackValue) {
@@ -247,17 +284,17 @@ function updateRadialProgress(targetNode, value) {
 }
 
 function findBarTargetNode(instance) {
-  var barMaster = instance.findOne(function(node) {
+  var barMaster = safeFindOne(instance, function(node) {
     return node.name === TARGET_NAMES.barMaster;
   });
   if (!barMaster) return null;
 
-  var barProgress = barMaster.findOne(function(node) {
+  var barProgress = safeFindOne(barMaster, function(node) {
     return node.name === TARGET_NAMES.barSocket;
   });
   if (!barProgress) return null;
 
-  var barIndicator = barProgress.findOne(function(node) {
+  var barIndicator = safeFindOne(barProgress, function(node) {
     return node.name === TARGET_NAMES.barIndicator;
   });
   if (!barIndicator) return null;
@@ -273,13 +310,12 @@ function findTargetNode(instance, kind) {
     return findBarTargetNode(instance);
   }
 
-  return instance.findOne(function(node) {
+  return safeFindOne(instance, function(node) {
     return node.name === TARGET_NAMES.radial;
   });
 }
 
-function applyValueToInstance(instance, value) {
-  const kind = getProgressKind(instance);
+function applyValueToInstance(instance, kind, value) {
   if (!kind) return false;
 
   const targetNode = findTargetNode(instance, kind);
@@ -292,28 +328,27 @@ function applyValueToInstance(instance, value) {
   return updateRadialProgress(targetNode, value);
 }
 
-function syncAllResponsiveSliders() {
-  const tracked = getTrackedInstances();
-  let synced = 0;
+async function syncAllResponsiveSliders() {
+  const tracked = await getTrackedInstances();
   let applied = 0;
 
   for (let i = 0; i < tracked.length; i += 1) {
     const node = tracked[i];
+    const kind = await getProgressKind(node);
     const value = readNumericValue(node);
-    if (value === null) continue;
+    if (!kind || value === null) continue;
 
     const previousValue = trackedValues.get(node.id);
     if (previousValue === value) continue;
 
     let success = false;
     try {
-      success = applyValueToInstance(node, value);
+      success = applyValueToInstance(node, kind, value);
     } catch (error) {
       success = false;
     }
 
     trackedValues.set(node.id, value);
-    synced += 1;
     if (success) {
       applied += 1;
     }
@@ -326,7 +361,7 @@ function syncAllResponsiveSliders() {
     }
   });
 
-  postFoundCharts(describeTrackedInstances(tracked));
+  postFoundCharts(await describeTrackedInstances(tracked));
   postStatus(
     tracked.length,
     applied,
@@ -348,18 +383,24 @@ function scheduleSync() {
   setTimeout(function() {
     scanScheduled = false;
     if (!listeningEnabled || isApplyingUpdate) return;
-    syncAllResponsiveSliders();
+    syncAllResponsiveSliders().catch(function() {
+      postStatus(0, 0, 'Sync failed');
+    });
   }, 60);
 }
 
-figma.on('currentpagechange', function() {
-  trackedValues.clear();
-  scheduleSync();
-});
+function registerEventHandlers() {
+  figma.on('currentpagechange', function() {
+    trackedValues.clear();
+    scheduleSync();
+  });
 
-figma.on('documentchange', function() {
-  scheduleSync();
-});
+  if (allPagesLoaded) {
+    figma.on('documentchange', function() {
+      scheduleSync();
+    });
+  }
+}
 
 figma.ui.onmessage = function(message) {
   if (!message) return;
@@ -385,10 +426,28 @@ figma.ui.onmessage = function(message) {
 
   if (message.type === 'sync-now') {
     trackedValues.clear();
-    syncAllResponsiveSliders();
+    syncAllResponsiveSliders().catch(function() {
+      postStatus(0, 0, 'Sync failed');
+    });
   }
 };
 
-startListening();
-syncAllResponsiveSliders();
-figma.notify('Rspndr is ready.');
+async function initializePlugin() {
+  if (typeof figma.loadAllPagesAsync === 'function') {
+    try {
+      await figma.loadAllPagesAsync();
+      allPagesLoaded = true;
+    } catch (error) {
+      allPagesLoaded = false;
+    }
+  }
+
+  registerEventHandlers();
+  startListening();
+  await syncAllResponsiveSliders();
+  figma.notify('Rspndr is ready.');
+}
+
+initializePlugin().catch(function() {
+  postStatus(0, 0, 'Startup failed');
+});

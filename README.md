@@ -2,25 +2,43 @@
 
 # Rspndr
 
-Rspndr is a Figma plugin that watches progress components and updates their visual fill when their `value` component property changes.
+Rspndr is a lightweight Figma plugin that watches supported progress components on the **current page** and updates their visual fill when their `value` component property changes.
 
-## What it supports
+It is designed to stay open quietly while you work.
+
+## What it watches
+
+Rspndr matches **only** these exact component names:
+
+- `Progress / Bar`
+- `Progress / Radial`
+
+It does **not** watch generic layers or anything else with `bar` in the name.
+
+## Component contract
 
 ### Bar
-Rspndr matches `Progress / Bar` and updates:
+Rspndr expects this structure for bar components:
 
-- `Bar Master`
-  - `Bar Progress`
-    - `Bar Progress Indicator`
+- `Progress / Bar`
+  - `Progress Text`
+  - `Bar Master`
+    - `Bar Progress`
+      - `Bar Progress Indicator`
 
-The indicator width is set to the same percentage as the `value` property, using `Bar Master` width as the source of truth.
+Behavior:
+
+- `Bar Master` is the width source
+- `Bar Progress` is the full-width socket/container
+- `Bar Progress Indicator` is the visible fill that gets resized
 
 ### Radial
-Rspndr matches `Progress / Radial` and updates:
+Rspndr expects this structure for radial components:
 
-- `Progress Value`
+- `Progress / Radial`
+  - `Progress Value`
 
-Rspndr looks for an editable ellipse inside that layer and updates its arc.
+Rspndr looks for an editable ellipse inside `Progress Value` and updates its arc.
 
 ## Property rules
 
@@ -33,11 +51,22 @@ Rspndr reads the `value` component property and accepts:
 Both are treated as `20`.
 
 ### `responsive-slider`
-Rspndr requires `responsive-slider = true` for radial components.
+Rspndr requires:
 
-For bar components, the plugin is configured to work without that property because the bar setup in this file does not expose it cleanly in your current Figma structure.
+- `responsive-slider = true`
 
-## How to install in Figma
+for radial components.
+
+For `Progress / Bar`, the plugin currently works without that property.
+
+## How it works
+
+- watches the **current page** only
+- rescans when the document changes
+- must remain open to listen for updates
+- updates only supported progress components that match the expected structure
+
+## Install in Figma
 
 1. Open Figma desktop.
 2. Go to **Plugins → Development → Import plugin from manifest…**
@@ -45,11 +74,11 @@ For bar components, the plugin is configured to work without that property becau
    - `/Users/omni/Documents/rspndr/manifest.json`
 4. Run **Rspndr**.
 
-## How to use
+## Use
 
 1. Put a supported `Progress / Bar` or `Progress / Radial` component on the current page.
 2. Keep the plugin open.
-3. Change the component’s `value` property.
+3. Change the component's `value` property.
 4. Rspndr will rescan the current page and update the visual progress layer.
 
 ## Plugin UI
@@ -63,6 +92,35 @@ The plugin UI is intentionally minimal:
 - manual scan button
 
 The Figma UI is compiled into a single self-contained `ui/index.html` file.
+
+## Troubleshooting
+
+### Nothing updates
+
+Check that:
+
+- the component name matches exactly:
+  - `Progress / Bar`
+  - `Progress / Radial`
+- the layer names match exactly
+- the plugin is still open
+- the component is on the **current page**
+
+### Radial is not detected
+
+Check that the component has:
+
+- `responsive-slider = true`
+
+### Bar is detected but does not fill correctly
+
+Check that the hierarchy is exactly:
+
+- `Bar Master`
+  - `Bar Progress`
+    - `Bar Progress Indicator`
+
+Rspndr resizes only `Bar Progress Indicator`, using `Bar Master.width` as the source.
 
 ## Local development
 
@@ -93,17 +151,16 @@ Then open:
 
 Before publishing:
 
-- confirm `Progress / Bar` still uses `Bar Master / Bar Progress / Bar Progress Indicator`
-- confirm `Progress / Radial` still uses `Progress Value`
+- confirm bar structure is still:
+  - `Bar Master / Bar Progress / Bar Progress Indicator`
+- confirm radial structure is still:
+  - `Progress Value`
 - confirm `value` is the component property driving the progress state
+- confirm radial components still expose `responsive-slider = true`
 - run:
   - `make test`
   - `make lint`
-- re-import the manifest in Figma and smoke test one bar and one radial on a real page
-
-## Current behavior notes
-
-- The plugin watches the **current page** only.
-- The plugin must remain open to listen for changes.
-- Bar width is derived from `Bar Master` width.
-- Radial updates require a real editable ellipse under `Progress Value`.
+- re-import the manifest in Figma and smoke test:
+  - one bar component
+  - one radial component
+  - one unrelated component to confirm it is ignored

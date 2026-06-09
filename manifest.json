@@ -1,6 +1,6 @@
 {
   "name": "Rspndr",
-  "id": "rspndr-local-prototype",
+  "id": "1646253306324694230",
   "api": "1.0.0",
   "main": "plugin/code.js",
   "ui": "ui/index.html",
@@ -10,5 +10,9 @@
       "command": "open",
       "name": "Open Rspndr"
     }
-  ]
+  ],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  },
+  "documentAccess": "dynamic-page"
 }
